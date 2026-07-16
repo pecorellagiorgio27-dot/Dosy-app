@@ -78,12 +78,12 @@ function playChime() {
       const gain = ctx.createGain();
       osc.type = 'sine';
       osc.frequency.value = freq;
-      gain.gain.setValueAtTime(0.0001, now + i*0.18);
-      gain.gain.exponentialRampToValueAtTime(0.18, now + i*0.18 + 0.02);
-      gain.gain.exponentialRampToValueAtTime(0.0001, now + i*0.18 + 0.5);
+      gain.gain.setValueAtTime(0.0001, now + i*0.22);
+      gain.gain.exponentialRampToValueAtTime(0.9, now + i*0.22 + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + i*0.22 + 0.7);
       osc.connect(gain).connect(ctx.destination);
-      osc.start(now + i*0.18);
-      osc.stop(now + i*0.18 + 0.55);
+      osc.start(now + i*0.22);
+      osc.stop(now + i*0.22 + 0.75);
     });
   } catch (e) { /* audio non disponibile, si ignora silenziosamente */ }
 }
