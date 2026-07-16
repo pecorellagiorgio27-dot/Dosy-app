@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dosi — promemoria farmaci</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#17262B">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div id="toast-root" class="toast-root" aria-live="polite"></div>
+
+<header class="topbar">
+  <div class="brand">
+    <span class="brand-mark" aria-hidden="true">℞</span>
+    <span class="brand-name">Dosi</span>
+  </div>
+  <div class="topbar-actions">
+    <button id="notif-status" class="chip chip-btn" type="button"></button>
+    <button id="add-med-btn" class="btn btn-primary" type="button">+ Farmaco</button>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <section class="hero card" aria-label="Linea del tempo di oggi">
+    <div class="hero-head">
+      <h1 id="today-label">Oggi</h1>
+      <div id="now-clock" class="now-clock">--:--</div>
+    </div>
+    <div class="timeline-wrap">
+      <div id="timeline" class="timeline" role="img" aria-label="Orari delle dosi di oggi"></div>
+      <div class="timeline-ticks">
+        <span>00</span><span>03</span><span>06</span><span>09</span><span>12</span><span>15</span><span>18</span><span>21</span><span>24</span>
+      </div>
+    </div>
+    <div class="legend">
+      <span class="legend-item"><i class="dot dot-upcoming"></i>In arrivo</span>
+      <span class="legend-item"><i class="dot dot-due"></i>Da prendere</span>
+      <span class="legend-item"><i class="dot dot-taken"></i>Presa</span>
+      <span class="legend-item"><i class="dot dot-missed"></i>Saltata</span>
+    </div>
+  </section>
+
+  <section class="next-dose-section" aria-label="Prossima dose">
+    <div id="next-dose-card" class="card next-dose-card"></div>
+  </section>
+
+  <section aria-label="Elenco farmaci">
+    <div class="section-head">
+      <h2>I tuoi farmaci</h2>
+    </div>
+    <div id="meds-list" class="meds-list"></div>
+    <div id="empty-state" class="empty-state card" hidden>
+      <p class="empty-title">Nessun farmaco ancora</p>
+      <p class="empty-body">Aggiungi il primo farmaco per iniziare a ricevere i promemoria.</p>
+      <button class="btn btn-primary" type="button" id="empty-add-btn">+ Aggiungi farmaco</button>
+    </div>
+  </section>
+
+  <section aria-label="Cronologia di oggi">
+    <div class="section-head">
+      <h2>Cronologia di oggi</h2>
+    </div>
+    <ul id="history-list" class="history-list"></ul>
+  </section>
+
+</main>
+
+<!-- Pannello aggiunta/modifica farmaco -->
+<div id="overlay" class="overlay" hidden></div>
+<aside id="med-panel" class="panel" hidden aria-label="Aggiungi o modifica farmaco">
+  <div class="panel-head">
+    <h2 id="panel-title">Nuovo farmaco</h2>
+    <button id="panel-close" class="icon-btn" type="button" aria-label="Chiudi">✕</button>
+  </div>
+  <form id="med-form" class="panel-body">
+    <input type="hidden" id="med-id">
+
+    <label class="field">
+      <span>Nome del farmaco</span>
+      <input type="text" id="med-name" placeholder="es. Cardioaspirin" required>
+    </label>
+
+    <label class="field">
+      <span>Dosaggio</span>
+      <input type="text" id="med-dose" placeholder="es. 1 compressa, 100 mg">
+    </label>
+
+    <div class="field">
+      <span>Etichetta colore</span>
+      <div id="color-picker" class="color-picker"></div>
+    </div>
+
+    <div class="field">
+      <span>Orari della dose</span>
+      <div id="times-list" class="times-list"></div>
+      <button type="button" id="add-time-btn" class="btn btn-ghost btn-small">+ Aggiungi orario</button>
+    </div>
+
+    <div class="field">
+      <span>Giorni</span>
+      <div id="days-picker" class="days-picker"></div>
+    </div>
+
+    <label class="field">
+      <span>Promemoria anticipato</span>
+      <select id="med-lead">
+        <option value="0">All'orario esatto</option>
+        <option value="5">5 minuti prima</option>
+        <option value="10">10 minuti prima</option>
+        <option value="15">15 minuti prima</option>
+      </select>
+    </label>
+
+    <div class="panel-footer">
+      <button type="button" id="delete-med-btn" class="btn btn-danger" hidden>Elimina farmaco</button>
+      <button type="submit" class="btn btn-primary">Salva</button>
+    </div>
+  </form>
+</aside>
+
+<audio id="chime" preload="auto"></audio>
+
+<script src="app.js"></script>
+</body>
+</html>

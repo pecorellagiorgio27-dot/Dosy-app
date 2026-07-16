@@ -1,0 +1,12 @@
+{
+  "name": "Dosi — promemoria farmaci",
+  "short_name": "Dosi",
+  "description": "Promemoria locale per non dimenticare i farmaci, senza server né account.",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#EEF2F1",
+  "theme_color": "#17262B",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml" }
+  ]
+}
