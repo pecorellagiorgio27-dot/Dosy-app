@@ -193,9 +193,10 @@ button{font-family:inherit;}
   width:min(420px, 100%);
   background:var(--surface);
   z-index:11; box-shadow:-8px 0 30px rgba(0,0,0,0.12);
-  display:flex; flex-direction:column;
+  flex-direction:column;
   animation:slidein .18s ease-out;
 }
+.panel:not([hidden]){display:flex;}
 @keyframes slidein{from{transform:translateX(24px); opacity:0;} to{transform:translateX(0); opacity:1;}}
 .panel-head{
   display:flex; align-items:center; justify-content:space-between;
