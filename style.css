@@ -1,144 +1,299 @@
-<!DOCTYPE html>
-<html lang="it">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Dosi — promemoria farmaci</title>
-<link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#17262B">
-<link rel="stylesheet" href="style.css">
-</head>
-<body>
+:root{
+  --bg: #EEF2F1;
+  --surface: #FFFFFF;
+  --surface-alt: #E4EAE8;
+  --ink: #17262B;
+  --ink-muted: #5B6B70;
+  --line: #CBD6D3;
+  --accent-due: #C1554B;
+  --accent-due-soft: #F3DBD8;
+  --accent-taken: #6E8F72;
+  --accent-taken-soft: #DEE8DE;
+  --accent-upcoming: #C98A3D;
+  --accent-upcoming-soft: #F3E3CC;
+  --accent-missed: #8A4A4A;
+  --accent-missed-soft: #E8D6D6;
+  --radius: 14px;
+  --serif: Georgia, "Iowan Old Style", "Palatino Linotype", "Book Antiqua", serif;
+  --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
 
-<div id="toast-root" class="toast-root" aria-live="polite"></div>
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  background:var(--bg);
+  color:var(--ink);
+  font-family:var(--sans);
+  -webkit-font-smoothing:antialiased;
+  min-height:100vh;
+}
 
-<header class="topbar">
-  <div class="brand">
-    <span class="brand-mark" aria-hidden="true">℞</span>
-    <span class="brand-name">Dosi</span>
-  </div>
-  <div class="topbar-actions">
-    <button id="notif-status" class="chip chip-btn" type="button"></button>
-    <button id="add-med-btn" class="btn btn-primary" type="button">+ Farmaco</button>
-  </div>
-</header>
+button{font-family:inherit;}
+:focus-visible{outline:2px solid var(--ink); outline-offset:2px;}
 
-<main class="wrap">
+/* Topbar */
+.topbar{
+  display:flex; align-items:center; justify-content:space-between;
+  padding:18px 20px;
+  border-bottom:1px solid var(--line);
+  background:var(--surface);
+  position:sticky; top:0; z-index:5;
+}
+.brand{display:flex; align-items:center; gap:8px;}
+.brand-mark{font-family:var(--serif); font-size:26px; color:var(--accent-due);}
+.brand-name{font-family:var(--serif); font-size:22px; letter-spacing:0.02em;}
+.topbar-actions{display:flex; align-items:center; gap:10px;}
 
-  <section class="hero card" aria-label="Linea del tempo di oggi">
-    <div class="hero-head">
-      <h1 id="today-label">Oggi</h1>
-      <div id="now-clock" class="now-clock">--:--</div>
-    </div>
-    <div class="timeline-wrap">
-      <div id="timeline" class="timeline" role="img" aria-label="Orari delle dosi di oggi"></div>
-      <div class="timeline-ticks">
-        <span>00</span><span>03</span><span>06</span><span>09</span><span>12</span><span>15</span><span>18</span><span>21</span><span>24</span>
-      </div>
-    </div>
-    <div class="legend">
-      <span class="legend-item"><i class="dot dot-upcoming"></i>In arrivo</span>
-      <span class="legend-item"><i class="dot dot-due"></i>Da prendere</span>
-      <span class="legend-item"><i class="dot dot-taken"></i>Presa</span>
-      <span class="legend-item"><i class="dot dot-missed"></i>Saltata</span>
-    </div>
-  </section>
+.wrap{
+  max-width:640px;
+  margin:0 auto;
+  padding:20px 16px 80px;
+  display:flex; flex-direction:column; gap:28px;
+}
 
-  <section class="next-dose-section" aria-label="Prossima dose">
-    <div id="next-dose-card" class="card next-dose-card"></div>
-  </section>
+.card{
+  background:var(--surface);
+  border:1px solid var(--line);
+  border-radius:var(--radius);
+  padding:20px;
+}
 
-  <section aria-label="Elenco farmaci">
-    <div class="section-head">
-      <h2>I tuoi farmaci</h2>
-    </div>
-    <div id="meds-list" class="meds-list"></div>
-    <div id="empty-state" class="empty-state card" hidden>
-      <p class="empty-title">Nessun farmaco ancora</p>
-      <p class="empty-body">Aggiungi il primo farmaco per iniziare a ricevere i promemoria.</p>
-      <button class="btn btn-primary" type="button" id="empty-add-btn">+ Aggiungi farmaco</button>
-    </div>
-  </section>
+/* Buttons */
+.btn{
+  border:none; border-radius:999px; padding:10px 18px;
+  font-size:14px; font-weight:600; cursor:pointer;
+  transition:transform .12s ease, background .15s ease;
+}
+.btn:active{transform:scale(0.97);}
+.btn-primary{background:var(--ink); color:var(--surface);}
+.btn-primary:hover{background:#0e1a1e;}
+.btn-ghost{background:transparent; color:var(--ink); border:1px solid var(--line);}
+.btn-ghost:hover{background:var(--surface-alt);}
+.btn-danger{background:transparent; color:var(--accent-due); border:1px solid var(--accent-due-soft);}
+.btn-danger:hover{background:var(--accent-due-soft);}
+.btn-small{padding:7px 14px; font-size:13px;}
 
-  <section aria-label="Statistiche di aderenza">
-    <div class="section-head">
-      <h2>Ultimi 7 giorni</h2>
-    </div>
-    <div id="stats-card" class="card stats-card"></div>
-  </section>
+.chip{
+  display:inline-flex; align-items:center; gap:6px;
+  border-radius:999px; padding:8px 14px; font-size:13px; font-weight:600;
+  border:1px solid var(--line); background:var(--surface-alt); color:var(--ink-muted);
+}
+.chip-btn{cursor:pointer;}
 
-  <section aria-label="Cronologia di oggi">
-    <div class="section-head">
-      <h2>Cronologia di oggi</h2>
-    </div>
-    <ul id="history-list" class="history-list"></ul>
-  </section>
+.icon-btn{
+  background:none; border:none; cursor:pointer; font-size:16px; color:var(--ink-muted);
+  padding:6px; border-radius:8px;
+}
+.icon-btn:hover{background:var(--surface-alt);}
 
-</main>
+/* Hero / timeline */
+.hero-head{display:flex; align-items:baseline; justify-content:space-between; margin-bottom:14px;}
+.hero-head h1{font-family:var(--serif); font-size:22px; margin:0; text-transform:capitalize;}
+.now-clock{font-family:var(--mono); font-size:15px; color:var(--ink-muted);}
 
-<!-- Pannello aggiunta/modifica farmaco -->
-<div id="overlay" class="overlay" hidden></div>
-<aside id="med-panel" class="panel" hidden aria-label="Aggiungi o modifica farmaco">
-  <div class="panel-head">
-    <h2 id="panel-title">Nuovo farmaco</h2>
-    <button id="panel-close" class="icon-btn" type="button" aria-label="Chiudi">✕</button>
-  </div>
-  <form id="med-form" class="panel-body">
-    <input type="hidden" id="med-id">
+.timeline-wrap{padding:6px 4px 0;}
+.timeline{
+  position:relative;
+  height:54px;
+  background:linear-gradient(180deg, var(--surface-alt) 0%, var(--surface-alt) 100%);
+  border-radius:8px;
+  overflow:visible;
+}
+.timeline::before{
+  content:"";
+  position:absolute; left:0; right:0; top:50%;
+  height:1px; background:var(--line); transform:translateY(-50%);
+}
+.timeline-ticks{
+  display:flex; justify-content:space-between;
+  font-family:var(--mono); font-size:10.5px; color:var(--ink-muted);
+  padding:4px 2px 0;
+}
+.tl-now{
+  position:absolute; top:-4px; bottom:-4px; width:2px;
+  background:var(--ink); border-radius:1px;
+}
+.tl-dose{
+  position:absolute; top:50%; transform:translate(-50%,-50%);
+  width:16px; height:16px; border-radius:50%;
+  border:2px solid var(--surface);
+  box-shadow:0 0 0 1px var(--line);
+  cursor:default;
+}
+.tl-dose.status-upcoming{background:var(--accent-upcoming);}
+.tl-dose.status-due{background:var(--accent-due); box-shadow:0 0 0 4px var(--accent-due-soft);}
+.tl-dose.status-taken{background:var(--accent-taken);}
+.tl-dose.status-missed{background:var(--accent-missed);}
 
-    <label class="field">
-      <span>Nome del farmaco</span>
-      <input type="text" id="med-name" placeholder="es. Cardioaspirin" required>
-    </label>
+.legend{display:flex; flex-wrap:wrap; gap:14px; margin-top:14px;}
+.legend-item{display:flex; align-items:center; gap:6px; font-size:12.5px; color:var(--ink-muted);}
+.dot{width:9px; height:9px; border-radius:50%; display:inline-block;}
+.dot-upcoming{background:var(--accent-upcoming);}
+.dot-due{background:var(--accent-due);}
+.dot-taken{background:var(--accent-taken);}
+.dot-missed{background:var(--accent-missed);}
 
-    <label class="field">
-      <span>Dosaggio</span>
-      <input type="text" id="med-dose" placeholder="es. 1 compressa, 100 mg">
-    </label>
+/* Next dose */
+.next-dose-card{display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap;}
+.next-dose-card.empty{color:var(--ink-muted); font-style:italic;}
+.nd-left{display:flex; align-items:center; gap:14px;}
+.nd-swatch{width:10px; height:44px; border-radius:6px; flex-shrink:0;}
+.nd-name{font-family:var(--serif); font-size:18px; margin:0;}
+.nd-meta{font-size:13px; color:var(--ink-muted); margin:2px 0 0;}
+.nd-countdown{font-family:var(--mono); font-size:13px; font-weight:600;}
+.nd-actions{display:flex; gap:8px; align-items:center;}
+.snooze-select{
+  font-family:inherit; font-size:12.5px; font-weight:600; color:var(--ink-muted);
+  border:1px solid var(--line); border-radius:999px; padding:7px 8px; background:var(--bg);
+}
 
-    <div class="field">
-      <span>Etichetta colore</span>
-      <div id="color-picker" class="color-picker"></div>
-    </div>
+/* Section headers */
+.section-head{display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;}
+.section-head h2{font-family:var(--serif); font-size:18px; margin:0;}
 
-    <div class="field">
-      <span>Orari della dose</span>
-      <div id="times-list" class="times-list"></div>
-      <button type="button" id="add-time-btn" class="btn btn-ghost btn-small">+ Aggiungi orario</button>
-    </div>
+/* Meds list */
+.meds-list{display:flex; flex-direction:column; gap:10px;}
+.med-card{
+  display:flex; align-items:center; gap:14px;
+  background:var(--surface); border:1px solid var(--line); border-radius:var(--radius);
+  padding:14px 16px; cursor:pointer;
+}
+.med-card:hover{border-color:var(--ink-muted);}
+.med-swatch{width:8px; align-self:stretch; border-radius:6px; flex-shrink:0;}
+.med-info{flex:1; min-width:0;}
+.med-name{font-weight:700; font-size:15px; margin:0;}
+.med-dose{font-size:13px; color:var(--ink-muted); margin:2px 0 0;}
+.med-times{display:flex; flex-wrap:wrap; gap:6px; margin-top:6px;}
+.time-tag{
+  font-family:var(--mono); font-size:11.5px; background:var(--surface-alt);
+  padding:2px 8px; border-radius:999px; color:var(--ink-muted);
+}
 
-    <div class="field">
-      <span>Giorni</span>
-      <div id="days-picker" class="days-picker"></div>
-    </div>
+.empty-state{text-align:center; padding:36px 20px;}
+.empty-title{font-family:var(--serif); font-size:18px; margin:0 0 6px;}
+.empty-body{color:var(--ink-muted); font-size:14px; margin:0 0 16px;}
 
-    <label class="field">
-      <span>Promemoria anticipato</span>
-      <select id="med-lead">
-        <option value="0">All'orario esatto</option>
-        <option value="5">5 minuti prima</option>
-        <option value="10">10 minuti prima</option>
-        <option value="15">15 minuti prima</option>
-      </select>
-    </label>
+/* History */
+.history-list{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:8px;}
+.history-item{
+  display:flex; align-items:center; gap:10px;
+  background:var(--surface); border:1px solid var(--line); border-radius:10px;
+  padding:10px 14px; font-size:13.5px;
+}
+.history-item .h-time{font-family:var(--mono); color:var(--ink-muted); width:52px; flex-shrink:0;}
+.history-item .h-status{margin-left:auto; font-size:12px; font-weight:700; padding:3px 10px; border-radius:999px;}
+.h-status.taken{background:var(--accent-taken-soft); color:var(--accent-taken);}
+.h-status.missed{background:var(--accent-missed-soft); color:var(--accent-missed);}
+.history-empty{color:var(--ink-muted); font-size:13.5px; padding:6px 2px;}
 
-    <div class="field">
-      <span>Scorta (opzionale)</span>
-      <div class="stock-row">
-        <input type="number" id="med-stock" min="0" placeholder="dosi rimaste">
-        <input type="number" id="med-stock-alert" min="0" placeholder="avvisa sotto">
-      </div>
-    </div>
+/* Overlay + panel */
+.overlay{
+  position:fixed; inset:0; background:rgba(23,38,43,0.35);
+  z-index:10; backdrop-filter:blur(1px);
+}
+.panel{
+  position:fixed; top:0; right:0; bottom:0;
+  width:min(420px, 100%);
+  background:var(--surface);
+  z-index:11; box-shadow:-8px 0 30px rgba(0,0,0,0.12);
+  flex-direction:column;
+  animation:slidein .18s ease-out;
+}
+.panel:not([hidden]){display:flex;}
+@keyframes slidein{from{transform:translateX(24px); opacity:0;} to{transform:translateX(0); opacity:1;}}
+.panel-head{
+  display:flex; align-items:center; justify-content:space-between;
+  padding:18px 20px; border-bottom:1px solid var(--line);
+}
+.panel-head h2{font-family:var(--serif); font-size:19px; margin:0;}
+.panel-body{padding:18px 20px; overflow-y:auto; display:flex; flex-direction:column; gap:18px; flex:1;}
+.field{display:flex; flex-direction:column; gap:8px; font-size:13.5px; font-weight:600; color:var(--ink-muted);}
+.field input[type=text], .field select{
+  font-family:inherit; font-size:14.5px; color:var(--ink); font-weight:400;
+  padding:10px 12px; border:1px solid var(--line); border-radius:8px; background:var(--bg);
+}
+.field input[type=time]{
+  font-family:var(--mono); font-size:14px; padding:8px 10px; border:1px solid var(--line);
+  border-radius:8px; background:var(--bg); color:var(--ink);
+}
 
-    <div class="panel-footer">
-      <button type="button" id="delete-med-btn" class="btn btn-danger" hidden>Elimina farmaco</button>
-      <button type="submit" class="btn btn-primary">Salva</button>
-    </div>
-  </form>
-</aside>
+.color-picker{display:flex; gap:10px; flex-wrap:wrap;}
+.color-swatch{
+  width:28px; height:28px; border-radius:50%; cursor:pointer;
+  border:2px solid transparent;
+}
+.color-swatch.selected{border-color:var(--ink);}
 
-<audio id="chime" preload="auto"></audio>
+.times-list{display:flex; flex-direction:column; gap:8px;}
+.time-row{display:flex; align-items:center; gap:8px;}
+.time-row .remove-time{
+  background:none; border:none; color:var(--ink-muted); cursor:pointer; font-size:15px; padding:4px 8px;
+}
+.time-row .remove-time:hover{color:var(--accent-due);}
 
-<script src="app.js"></script>
-</body>
-</html>
+.days-picker{display:flex; gap:6px; flex-wrap:wrap;}
+.day-toggle{
+  border:1px solid var(--line); background:var(--bg); color:var(--ink-muted);
+  border-radius:999px; padding:7px 12px; font-size:12.5px; font-weight:700; cursor:pointer;
+}
+.day-toggle.active{background:var(--ink); color:var(--surface); border-color:var(--ink);}
+
+.panel-footer{display:flex; justify-content:space-between; align-items:center; gap:10px; margin-top:8px;}
+
+/* Stock / scorta */
+.stock-row{display:flex; gap:10px;}
+.stock-row input{
+  font-family:inherit; font-size:14.5px; color:var(--ink); font-weight:400; flex:1; min-width:0;
+  padding:10px 12px; border:1px solid var(--line); border-radius:8px; background:var(--bg);
+}
+.stock-tag{
+  font-size:11.5px; font-weight:700; padding:2px 8px; border-radius:999px;
+  background:var(--surface-alt); color:var(--ink-muted);
+}
+.stock-tag.low{background:var(--accent-due-soft); color:var(--accent-due);}
+
+/* Stats */
+.stats-card{display:flex; align-items:center; gap:22px; flex-wrap:wrap;}
+.stats-figure{text-align:center;}
+.stats-number{font-family:var(--serif); font-size:34px; line-height:1; display:block;}
+.stats-label{font-size:12px; color:var(--ink-muted); margin-top:4px;}
+.stats-bars{display:flex; gap:6px; align-items:flex-end; height:52px; flex:1; min-width:160px;}
+.stats-bar-col{display:flex; flex-direction:column; align-items:center; gap:4px; flex:1;}
+.stats-bar{
+  width:100%; max-width:22px; border-radius:4px 4px 0 0; background:var(--accent-taken);
+  min-height:3px;
+}
+.stats-bar.empty{background:var(--surface-alt);}
+.stats-bar-label{font-size:10px; color:var(--ink-muted);}
+.stats-empty{color:var(--ink-muted); font-size:13.5px;}
+/* Toasts */
+.toast-root{
+  position:fixed; top:16px; left:50%; transform:translateX(-50%);
+  z-index:50; display:flex; flex-direction:column; gap:8px; align-items:center;
+}
+.toast{
+  background:var(--ink); color:var(--surface);
+  padding:12px 18px; border-radius:10px; font-size:14px;
+  box-shadow:0 8px 24px rgba(0,0,0,0.18);
+  display:flex; align-items:center; gap:12px;
+  animation:toastin .2s ease-out;
+  max-width:90vw;
+}
+@keyframes toastin{from{opacity:0; transform:translateY(-8px);} to{opacity:1; transform:translateY(0);}}
+.toast button{
+  background:rgba(255,255,255,0.15); color:var(--surface); border:none;
+  border-radius:999px; padding:6px 12px; font-size:12.5px; font-weight:700; cursor:pointer;
+}
+
+@media (max-width:480px){
+  .wrap{padding:16px 12px 80px;}
+  .brand-name{font-size:19px;}
+  .next-dose-card{flex-direction:column; align-items:stretch;}
+  .nd-actions{justify-content:stretch;}
+  .nd-actions .btn{flex:1;}
+}
+
+@media (prefers-reduced-motion: reduce){
+  *{animation-duration:0.001s !important; transition-duration:0.001s !important;}
+}
