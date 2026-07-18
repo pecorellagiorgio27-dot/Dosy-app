@@ -170,10 +170,33 @@ function markTaken(medId, time) {
   const key = dateKey(new Date());
   if (!history[key]) history[key] = [];
   const existing = history[key].find(h => h.medId === medId && h.time === time);
+  const alreadyTaken = existing && existing.status === 'taken';
   if (existing) { existing.status = 'taken'; existing.ts = new Date().toISOString(); }
   else history[key].push({ medId, time, status: 'taken', ts: new Date().toISOString() });
   saveHistory();
+
+  if (!alreadyTaken) {
+    const med = meds.find(m => m.id === medId);
+    if (med && typeof med.stock === 'number') {
+      med.stock = Math.max(0, med.stock - 1);
+      saveMeds();
+      if (typeof med.stockAlert === 'number' && med.stock <= med.stockAlert) {
+        showPlainToast(med.stock === 0
+          ? `${med.name}: scorta esaurita`
+          : `${med.name}: restano solo ${med.stock} dosi`);
+      }
+    }
+  }
   renderAll();
+}
+
+function showPlainToast(text) {
+  const root = document.getElementById('toast-root');
+  const el = document.createElement('div');
+  el.className = 'toast';
+  el.innerHTML = `<span>⚠️ ${escapeHtml(text)}</span>`;
+  root.appendChild(el);
+  setTimeout(() => { if (el.parentNode) el.remove(); }, 6000);
 }
 
 function markMissed(medId, time) {
@@ -186,16 +209,13 @@ function markMissed(medId, time) {
   renderAll();
 }
 
-function snoozeDose(medId, time) {
-  // ri-notifica tra 10 minuti azzerando il flag "notified" a un orario fittizio +10
+function snoozeDose(medId, time, minutes = 10) {
   const now = new Date();
-  const target = new Date(now.getTime() + 10*60000);
-  const fakeKey = `${dateKey(now)}|${medId}|${time}`;
-  // rimuove il flag cosi al prossimo giro utile potremo ri-triggerare manualmente
+  const target = new Date(now.getTime() + minutes*60000);
   setTimeout(() => {
     const med = meds.find(m => m.id === medId);
     if (med) fireReminder(med, time);
-  }, 10*60000);
+  }, minutes*60000);
   showToast({ name: 'Promemoria rimandato', dose: '' }, timeStr(target));
 }
 
@@ -253,13 +273,22 @@ function renderNextDose() {
     <div class="nd-right" style="display:flex; align-items:center; gap:14px;">
       <span class="nd-countdown">${diffLabel}</span>
       <div class="nd-actions">
-        <button class="btn btn-ghost btn-small" data-action="snooze">Rimanda 10'</button>
+        <select class="snooze-select" aria-label="Minuti di rinvio">
+          <option value="5">5'</option>
+          <option value="10" selected>10'</option>
+          <option value="15">15'</option>
+          <option value="30">30'</option>
+        </select>
+        <button class="btn btn-ghost btn-small" data-action="snooze">Rimanda</button>
         <button class="btn btn-primary btn-small" data-action="taken">Segna presa</button>
       </div>
     </div>
   `;
   el.querySelector('[data-action="taken"]').onclick = () => markTaken(next.med.id, next.time);
-  el.querySelector('[data-action="snooze"]').onclick = () => snoozeDose(next.med.id, next.time);
+  el.querySelector('[data-action="snooze"]').onclick = () => {
+    const mins = Number(el.querySelector('.snooze-select').value);
+    snoozeDose(next.med.id, next.time, mins);
+  };
 }
 
 function renderMedsList() {
@@ -272,17 +301,70 @@ function renderMedsList() {
     const card = document.createElement('div');
     card.className = 'med-card';
     const daysLabel = med.days.length === 7 ? 'Tutti i giorni' : med.days.map(d => DAY_LABELS[d]).join(', ');
+    let stockHtml = '';
+    if (typeof med.stock === 'number') {
+      const low = typeof med.stockAlert === 'number' && med.stock <= med.stockAlert;
+      stockHtml = `<span class="stock-tag${low ? ' low' : ''}">${med.stock} dosi rimaste</span>`;
+    }
     card.innerHTML = `
       <div class="med-swatch" style="background:${med.color}"></div>
       <div class="med-info">
         <p class="med-name">${escapeHtml(med.name)}</p>
         <p class="med-dose">${escapeHtml(med.dose || '')} ${med.dose ? '· ' : ''}${daysLabel}</p>
-        <div class="med-times">${med.times.map(t => `<span class="time-tag">${t}</span>`).join('')}</div>
+        <div class="med-times">${med.times.map(t => `<span class="time-tag">${t}</span>`).join('')}${stockHtml}</div>
       </div>
     `;
     card.onclick = () => openPanel(med);
     list.appendChild(card);
   }
+}
+
+function renderStats() {
+  const el = document.getElementById('stats-card');
+  const days = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    days.push(d);
+  }
+  let totalScheduled = 0, totalTaken = 0;
+  const perDay = days.map((d) => {
+    const key = dateKey(d);
+    let scheduled = 0, taken = 0;
+    for (const med of meds) {
+      if (!isScheduledToday(med, d)) continue;
+      scheduled += med.times.length;
+    }
+    const dayHistory = history[key] || [];
+    taken = dayHistory.filter(h => h.status === 'taken').length;
+    totalScheduled += scheduled;
+    totalTaken += Math.min(taken, scheduled || taken);
+    return { d, scheduled, taken };
+  });
+
+  if (totalScheduled === 0) {
+    el.innerHTML = '<p class="stats-empty">Non appena registri qualche dose, qui vedrai la tua percentuale di aderenza.</p>';
+    return;
+  }
+
+  const pct = Math.round((totalTaken / totalScheduled) * 100);
+  const dayInitials = ['D','L','M','M','G','V','S'];
+  const bars = perDay.map(({ d, scheduled, taken }) => {
+    const ratio = scheduled > 0 ? taken / scheduled : 0;
+    const h = scheduled > 0 ? Math.max(6, Math.round(ratio * 52)) : 3;
+    return `<div class="stats-bar-col">
+      <div class="stats-bar${scheduled === 0 ? ' empty' : ''}" style="height:${h}px"></div>
+      <span class="stats-bar-label">${dayInitials[d.getDay()]}</span>
+    </div>`;
+  }).join('');
+
+  el.innerHTML = `
+    <div class="stats-figure">
+      <span class="stats-number">${pct}%</span>
+      <span class="stats-label">dosi prese</span>
+    </div>
+    <div class="stats-bars">${bars}</div>
+  `;
 }
 
 function renderHistory() {
@@ -313,6 +395,8 @@ function renderAll() {
   renderNextDose();
   renderMedsList();
   renderHistory();
+  renderStats();
+  updateAppBadge();
 }
 
 // ---------- panel (add/edit) ----------
@@ -364,6 +448,8 @@ function openPanel(med = null) {
   document.getElementById('med-name').value = med ? med.name : '';
   document.getElementById('med-dose').value = med ? med.dose : '';
   document.getElementById('med-lead').value = med ? String(med.lead) : '0';
+  document.getElementById('med-stock').value = (med && typeof med.stock === 'number') ? med.stock : '';
+  document.getElementById('med-stock-alert').value = (med && typeof med.stockAlert === 'number') ? med.stockAlert : '';
   document.getElementById('delete-med-btn').hidden = !med;
 
   editingColor = med ? med.color : COLORS[meds.length % COLORS.length];
@@ -391,16 +477,21 @@ function handleFormSubmit(ev) {
   const times = Array.from(document.querySelectorAll('#times-list input[type=time]'))
     .map(i => i.value).filter(Boolean).sort();
   const days = Array.from(editingDays).sort();
+  const stockRaw = document.getElementById('med-stock').value;
+  const stockAlertRaw = document.getElementById('med-stock-alert').value;
+  const stock = stockRaw !== '' ? Math.max(0, parseInt(stockRaw, 10)) : undefined;
+  const stockAlert = stockAlertRaw !== '' ? Math.max(0, parseInt(stockAlertRaw, 10)) : undefined;
 
   if (!name || times.length === 0 || days.length === 0) return;
 
-  const med = { id, name, dose, color: editingColor, times, days, lead };
+  const med = { id, name, dose, color: editingColor, times, days, lead, stock, stockAlert };
   const idx = meds.findIndex(m => m.id === id);
   if (idx >= 0) meds[idx] = med; else meds.push(med);
   saveMeds();
   closePanel();
   renderAll();
   scheduleAllNativeNotifications();
+  showPlainToast('Farmaco salvato');
 }
 
 function handleDelete() {
@@ -412,7 +503,19 @@ function handleDelete() {
   closePanel();
   renderAll();
   scheduleAllNativeNotifications();
+  showPlainToast('Farmaco eliminato');
 }
+
+// ---------- badge sull'icona con le dosi in sospeso ----------
+function updateAppBadge() {
+  if (!('setAppBadge' in navigator)) return;
+  try {
+    const pending = todaysDoses().filter(d => d.status === 'due' || d.status === 'missed').length;
+    if (pending > 0) navigator.setAppBadge(pending).catch(() => {});
+    else navigator.clearAppBadge().catch(() => {});
+  } catch (e) { /* Badge API non disponibile: si ignora */ }
+}
+
 
 // ---------- notifiche native (solo dentro l'app Capacitor, ignorato nel browser) ----------
 function isNativeApp() {
@@ -433,20 +536,22 @@ async function scheduleAllNativeNotifications() {
     for (const med of meds) {
       for (const time of med.times) {
         const [h, m] = time.split(':').map(Number);
-        notifications.push({
-          id: id++,
-          title: `È ora di ${med.name}`,
-          body: med.dose ? `${med.dose} · ore ${time}` : `Ore ${time}`,
-          schedule: { on: { hour: h, minute: m }, repeats: true }
-        });
+        const daysToSchedule = med.days.length === 7 ? [null] : med.days;
+        for (const jsDay of daysToSchedule) {
+          const on = { hour: h, minute: m };
+          if (jsDay !== null) on.weekday = jsDay + 1; // Capacitor: 1=domenica ... 7=sabato
+          notifications.push({
+            id: id++,
+            title: `È ora di ${med.name}`,
+            body: med.dose ? `${med.dose} · ore ${time}` : `Ore ${time}`,
+            schedule: { on, repeats: true }
+          });
+        }
       }
     }
     if (notifications.length) await LocalNotifications.schedule({ notifications });
   } catch (e) { /* plugin non disponibile: si ignora, resta il fallback browser */ }
 }
-// NOTA: questa pianificazione ripete ogni giorno alla stessa ora e non filtra
-// ancora per i giorni della settimana scelti nel farmaco: è un punto di
-// partenza da raffinare se servono giorni specifici.
 
 // ---------- init ----------
 function init() {
@@ -469,8 +574,15 @@ function init() {
   renderAll();
   checkReminders();
   scheduleAllNativeNotifications();
-  setInterval(() => { renderAll(); checkReminders(); }, 20000);
+  setInterval(() => { renderAll(); checkReminders(); }, 15000);
   setInterval(renderClock, 1000);
+
+  // Su mobile la pagina può restare "congelata" in background: appena torna
+  // visibile, ricontrolliamo subito invece di aspettare il prossimo giro.
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') { renderAll(); checkReminders(); }
+  });
+  window.addEventListener('focus', () => { renderAll(); checkReminders(); });
 
   if ('serviceWorker' in navigator && (location.protocol === 'http:' || location.protocol === 'https:')) {
     navigator.serviceWorker.register('sw.js').catch(() => {});
