@@ -60,6 +60,13 @@
     </div>
   </section>
 
+  <section aria-label="Statistiche di aderenza">
+    <div class="section-head">
+      <h2>Ultimi 7 giorni</h2>
+    </div>
+    <div id="stats-card" class="card stats-card"></div>
+  </section>
+
   <section aria-label="Cronologia di oggi">
     <div class="section-head">
       <h2>Cronologia di oggi</h2>
@@ -114,6 +121,14 @@
         <option value="15">15 minuti prima</option>
       </select>
     </label>
+
+    <div class="field">
+      <span>Scorta (opzionale)</span>
+      <div class="stock-row">
+        <input type="number" id="med-stock" min="0" placeholder="dosi rimaste">
+        <input type="number" id="med-stock-alert" min="0" placeholder="avvisa sotto">
+      </div>
+    </div>
 
     <div class="panel-footer">
       <button type="button" id="delete-med-btn" class="btn btn-danger" hidden>Elimina farmaco</button>
